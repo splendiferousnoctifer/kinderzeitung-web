@@ -117,6 +117,28 @@
   #toast.show { transform: none; visibility: visible; }
   #toast.error { background: var(--accent); color: var(--accent-ink); }
   [hidden] { display: none !important; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--line); margin-bottom: 6px; }
+  .tab { min-height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: 600 15px/1 var(--sans); cursor: pointer; }
+  .tab[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .select {
+    min-height: 44px; max-width: 60%; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); font: 600 15px/1 var(--sans);
+  }
+  .people { display: grid; gap: 10px; }
+  @media (min-width: 520px) { .people { grid-template-columns: repeat(3, 1fr); } }
+  .person-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .person-head strong { font-family: var(--serif); font-size: 19px; }
+  .person .checklist { margin-top: 8px; }
+  .filters { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; }
+  .fchip {
+    flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent;
+    color: var(--ink); font: 600 14px/1 var(--sans); cursor: pointer;
+  }
+  .fchip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .owner { font-weight: 700; color: var(--ink); }
+  a.ghost { display: inline-flex; align-items: center; text-decoration: none; }
 </style>
 </head>
 <body>
@@ -215,51 +237,130 @@ async function loadThumb(id, box, attempt = 0) {
 
 // ---------- state
 let state = null;
+let admin = null; // Redaktion view data (only for the editor)
+let view = "mine";
+try { view = localStorage.getItem("kz-view") || "mine"; } catch {}
 const draft = { category: null, files: [], text: "" };
+const adminFilter = { person: "all", category: "all" };
 
 async function refresh(data) {
   state = data || (await api("me"));
+  if (state.isAdmin && view === "redaktion") await loadAdmin();
   render();
 }
+
+async function loadAdmin(issue) {
+  try { admin = await api("admin?issue=" + encodeURIComponent(issue ?? admin?.issue ?? "")); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function switchView(id) {
+  view = id;
+  try { localStorage.setItem("kz-view", id); } catch {}
+  if (id === "redaktion" && !admin) await loadAdmin();
+  render();
+  window.scrollTo({ top: 0 });
+}
+
+const daysText = (n) => (n === 0 ? "heute" : n === 1 ? "morgen" : `in ${n} Tagen`);
+const catTitleOf = (id) => state.categories.find((c) => c.id === id)?.title ?? id;
+const chip = (id, n) => h("span", { class: "chip" + (n ? " done" : "") }, n ? svg(ICON_CHECK) : null, catTitleOf(id) + (n > 1 ? ` ${n}` : ""));
 
 // ---------- render
 function render() {
   const s = state;
-  const app = document.getElementById("app");
-  const filed = s.items.filter((i) => i.category);
-  const pending = s.items.filter((i) => !i.category);
-  const have = new Set(filed.map((i) => i.category));
-  const catTitle = Object.fromEntries(s.categories.map((c) => [c.id, c.title]));
-  const days = s.daysLeft === 0 ? "heute" : s.daysLeft === 1 ? "morgen" : `in ${s.daysLeft} Tagen`;
+  const isRed = s.isAdmin && view === "redaktion";
+  document.getElementById("app").replaceChildren(...[
+    masthead(),
+    s.isAdmin ? tabs() : null,
+    ...(isRed ? redaktionView() : mineView()),
+    h("footer", { text: isRed ? "Diesen Bereich siehst nur du." : "Diese Seite ist nur für dich. Bitte gib den Link nicht weiter." }),
+  ].filter(Boolean));
+}
 
-  app.replaceChildren(...[
-    h("header", { class: "masthead" },
-      h("p", { class: "eyebrow", text: "Kinderzeitung" }),
-      h("h1", { text: `Hallo ${s.name}!` }),
-      h("p", { class: "meta", text: `Ausgabe ${s.issueLabel}` }),
-      h("span", { class: "deadline", text: `Redaktionsschluss ${s.deadline} (${days})` }),
-      h("div", { class: "checklist", "aria-label": "Diesen Monat" },
-        s.monthly.map((id) => h("span", { class: "chip" + (have.has(id) ? " done" : "") },
-          have.has(id) ? svg(ICON_CHECK) : null, catTitle[id]))),
-    ),
+function masthead() {
+  const s = state;
+  const counts = {};
+  for (const i of s.items) if (i.category) counts[i.category] = (counts[i.category] ?? 0) + 1;
+  return h("header", { class: "masthead" },
+    h("p", { class: "eyebrow", text: "Kinderzeitung" }),
+    h("h1", { text: `Hallo ${s.name}!` }),
+    h("p", { class: "meta", text: `Ausgabe ${s.issueLabel}` }),
+    h("span", { class: "deadline", text: `Redaktionsschluss ${s.deadline} (${daysText(s.daysLeft)})` }),
+    h("div", { class: "checklist", "aria-label": "Diesen Monat" }, s.monthly.map((id) => chip(id, counts[id] ? 1 : 0))),
+  );
+}
 
+function tabs() {
+  const tab = (id, label) => h("button", {
+    type: "button", role: "tab", class: "tab", "aria-selected": String(view === id), onclick: () => switchView(id),
+  }, label);
+  return h("div", { class: "tabs", role: "tablist" }, tab("mine", "Meine Beiträge"), tab("redaktion", "Redaktion"));
+}
+
+function mineView() {
+  const filed = state.items.filter((i) => i.category);
+  const pending = state.items.filter((i) => !i.category);
+  return [
     pending.length ? h("section", {},
       h("h2", { text: "Wartet auf Kategorie" }),
       h("p", { class: "hint", style: "margin:-6px 0 12px", text: "Über WhatsApp geschickt. Tipp an, wofür es ist." }),
       h("ul", { class: "items" }, pending.map((i) => itemCard(i, true))),
     ) : null,
-
     h("section", {}, newForm()),
-
     h("section", {},
       h("h2", { text: `Deine Beiträge (${filed.length})` }),
       filed.length
         ? h("ul", { class: "items" }, filed.map((i) => itemCard(i, false)))
         : h("div", { class: "card empty-state", text: "Für diese Ausgabe ist noch nichts da." }),
     ),
+  ];
+}
 
-    h("footer", { text: "Diese Seite ist nur für dich. Bitte gib den Link nicht weiter." }),
-  ].filter(Boolean));
+function redaktionView() {
+  const a = admin;
+  if (!a) return [h("section", {}, h("div", { class: "card empty-state", text: "Wird geladen …" }))];
+
+  const select = h("select", {
+    class: "select", "aria-label": "Ausgabe",
+    onchange: async (e) => { await loadAdmin(e.target.value); render(); },
+  }, a.issues.map((i) => h("option", { value: i.id, selected: i.id === a.issue }, i.label)));
+
+  const people = h("div", { class: "people" }, a.people.map((p) => h("div", { class: "card person" },
+    h("div", { class: "person-head" }, h("strong", { text: p.name }), h("span", { class: "hint", text: `${p.total} Beiträge` })),
+    h("div", { class: "checklist" }, state.monthly.map((id) => chip(id, p.counts[id] ?? 0))),
+    p.counts.sonstiges ? h("p", { class: "hint", style: "margin-top:6px", text: `+ ${p.counts.sonstiges} Sonstiges` }) : null,
+    p.waiting ? h("p", { class: "hint", style: "margin-top:6px;color:var(--accent)", text: `${p.waiting} warten auf Kategorie` }) : null,
+  )));
+
+  const fchip = (key, value, label) => h("button", {
+    type: "button", class: "fchip", "aria-pressed": String(adminFilter[key] === value),
+    onclick: () => { adminFilter[key] = value; render(); },
+  }, label);
+  const personRow = h("div", { class: "filters", "aria-label": "Person" },
+    fchip("person", "all", "Alle"), a.people.map((p) => fchip("person", String(p.id), p.name)));
+  const catRow = h("div", { class: "filters", "aria-label": "Kategorie" },
+    fchip("category", "all", "Alle Kategorien"), state.categories.map((c) => fchip("category", c.id, c.title)),
+    a.isCurrent ? fchip("category", "none", "Ohne Kategorie") : null);
+
+  const items = a.items.filter((i) =>
+    (adminFilter.person === "all" || String(i.ownerId) === adminFilter.person) &&
+    (adminFilter.category === "all" || (adminFilter.category === "none" ? !i.category : i.category === adminFilter.category)));
+
+  return [
+    h("section", {},
+      h("div", { class: "toolbar" }, h("h2", { style: "margin:0", text: "Redaktion" }), select),
+      h("p", { class: "meta", text: a.isCurrent ? `Redaktionsschluss ${a.deadline} (${daysText(a.daysLeft)})` : "Abgeschlossene Ausgabe" }),
+    ),
+    h("section", { style: "margin-top:14px" }, people),
+    h("section", {},
+      h("h2", { text: `Alle Beiträge (${items.length})` }),
+      personRow, catRow,
+      items.length
+        ? h("ul", { class: "items" }, items.map((i) => itemCard(i, !i.category, { owner: i.owner, driveUrl: i.driveUrl })))
+        : h("div", { class: "card empty-state", text: "Nichts für diese Auswahl." }),
+    ),
+  ];
 }
 
 function segmented(selected, onPick, compact = false) {
@@ -341,13 +442,14 @@ function newForm() {
 
 const KIND_LABEL = { text: "TEXT", document: "PDF", audio: "AUDIO", video: "VIDEO", image: "FOTO" };
 
-function itemCard(i, isPending) {
+function itemCard(i, isPending, opts = {}) {
   const thumb = h("div", { class: "thumb", text: KIND_LABEL[i.kind] || "DATEI" });
   if (i.thumb) loadThumb(i.id, thumb);
   const date = new Date(i.createdAt).toLocaleString("de-AT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const catTitle = state.categories.find((c) => c.id === i.category)?.title;
   const body = h("div", {},
     h("div", { class: "tags" },
+      opts.owner ? h("span", { class: "owner", text: opts.owner }) : null,
       catTitle ? h("span", { class: "tag", text: catTitle }) : null,
       h("span", { text: i.source === "web" ? "Web" : "WhatsApp" }), h("span", { text: "·" }), h("span", { text: date })),
     h("p", { class: "text clamp" + (i.text ? "" : " empty"), text: i.text || (i.kind === "text" ? "" : "Noch kein Text") }),
@@ -363,6 +465,7 @@ function itemCard(i, isPending) {
 
   body.append(h("div", { class: "actions" },
     h("button", { class: "ghost", type: "button", text: i.kind === "text" ? "Bearbeiten" : "Text bearbeiten", onclick: () => openEditor(li, i) }),
+    opts.driveUrl ? h("a", { class: "ghost", href: opts.driveUrl, target: "_blank", rel: "noopener", text: "In Drive" }) : null,
     h("button", { class: "ghost danger", type: "button", text: "Löschen", onclick: () => confirmDelete(li, i) }),
   ));
   return li;
