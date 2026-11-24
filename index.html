@@ -132,11 +132,16 @@ const HALF_A4 = 1500; // characters, roughly half an A4 page of running text
 
 // ---------- token: from the personal link (#t=…), remembered on this device
 function readToken() {
+  // WhatsApp's button opens …/?t=<code>; the bot's text link uses …/#t=<code>.
+  const fromQuery = new URLSearchParams(location.search).get("t");
   const fromHash = new URLSearchParams(location.hash.slice(1)).get("t");
+  const given = fromHash || fromQuery;
+  // Keep the code out of the query string from now on (it would be sent to the host on every reload).
+  if (fromQuery) history.replaceState(null, "", location.pathname + "#t=" + fromQuery);
   try {
-    if (fromHash) localStorage.setItem("kz-token", fromHash);
-    return fromHash || localStorage.getItem("kz-token");
-  } catch { return fromHash; }
+    if (given) localStorage.setItem("kz-token", given);
+    return given || localStorage.getItem("kz-token");
+  } catch { return given; }
 }
 const TOKEN = readToken();
 
