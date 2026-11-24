@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1916" media="(prefers-color-scheme: dark)">
+<title>Kinderzeitung</title>
+<style>
+  :root {
+    --paper: #f6f1e7; --card: #fffdf8; --ink: #1f1c18; --muted: #6d655a; --line: #e3dacb;
+    --accent: #b4321f; --accent-ink: #fff; --ok: #2f6b3a; --ok-bg: #e4efdf; --warn-bg: #fbeee0;
+    --radius: 14px; --shadow: 0 1px 2px rgba(40, 30, 10, .06), 0 4px 14px rgba(40, 30, 10, .05);
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1b1916; --card: #26231f; --ink: #f1ebe0; --muted: #a79e90; --line: #3a352e;
+      --accent: #e0644e; --accent-ink: #1b1916; --ok: #9fd3a6; --ok-bg: #22352a; --warn-bg: #3a2a1d;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--sans);
+    padding: max(16px, env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  main { max-width: 560px; margin: 0 auto; }
+  h1, h2 { font-family: var(--serif); font-weight: 700; margin: 0; letter-spacing: -.01em; }
+  h1 { font-size: 30px; line-height: 1.15; }
+  h2 { font-size: 21px; margin-bottom: 12px; }
+  p { margin: 0; }
+  .masthead { border-bottom: 3px double var(--ink); padding-bottom: 14px; margin-bottom: 18px; }
+  .eyebrow { font: 600 12px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .meta { color: var(--muted); margin-top: 6px; }
+  .deadline { display: inline-block; margin-top: 10px; padding: 4px 10px; border-radius: 999px; background: var(--warn-bg); font-size: 14px; font-weight: 600; }
+  .checklist { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  .chip.done { background: var(--ok-bg); border-color: transparent; color: var(--ok); font-weight: 600; }
+  .chip svg { width: 14px; height: 14px; }
+  section { margin-top: 26px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .hint { color: var(--muted); font-size: 14px; }
+  label.field { display: block; font-weight: 600; margin: 16px 0 6px; }
+  .seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .seg button {
+    min-height: 48px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: transparent;
+    color: var(--ink); font: 600 15px/1.2 var(--sans); text-align: left; cursor: pointer;
+  }
+  .seg button small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .seg button[aria-checked="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+  .seg button[aria-checked="true"] small { color: inherit; opacity: .85; }
+  .seg.compact button { min-height: 44px; font-size: 14px; }
+  .pick {
+    display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; border: 1.5px dashed var(--line);
+    border-radius: 12px; color: var(--ink); font-weight: 600; cursor: pointer; position: relative;
+  }
+  .pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .pick svg { width: 22px; height: 22px; }
+  .selected { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; margin-top: 10px; }
+  .selected figure { margin: 0; position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--line); }
+  .selected img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .selected .file { display: grid; place-items: center; height: 100%; font-size: 12px; padding: 4px; text-align: center; word-break: break-all; }
+  .selected .rm {
+    position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0;
+    background: rgba(0, 0, 0, .6); color: #fff; font-size: 18px; line-height: 1; cursor: pointer;
+  }
+  textarea {
+    width: 100%; min-height: 140px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); resize: vertical;
+    background: var(--paper); color: var(--ink); font: 16px/1.5 var(--sans);
+  }
+  textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .counter { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; }
+  .bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 4px; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .primary {
+    width: 100%; min-height: 52px; margin-top: 18px; border: 0; border-radius: 12px; background: var(--accent);
+    color: var(--accent-ink); font: 700 17px/1 var(--sans); cursor: pointer;
+  }
+  .primary:disabled { opacity: .5; cursor: default; }
+  .progress { margin-top: 10px; }
+  ul.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .item { display: grid; grid-template-columns: 84px 1fr; gap: 12px; }
+  .thumb {
+    width: 84px; height: 84px; border-radius: 10px; overflow: hidden; background: var(--line); display: grid; place-items: center;
+    font: 700 13px/1 var(--sans); color: var(--muted); letter-spacing: .04em;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+  .tag { font-weight: 700; color: var(--accent); }
+  .text { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .text.clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .text.empty { color: var(--muted); font-style: italic; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .ghost {
+    min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: transparent;
+    color: var(--ink); font: 600 14px/1 var(--sans); cursor: pointer;
+  }
+  .ghost.danger { color: var(--accent); }
+  .ghost.solid { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .editor { grid-column: 1 / -1; }
+  .editor textarea { min-height: 120px; margin-top: 10px; }
+  .pending { border-color: var(--accent); }
+  .empty-state { text-align: center; padding: 24px 12px; color: var(--muted); }
+  .center { min-height: 70vh; display: grid; place-items: center; text-align: center; }
+  .center p { max-width: 32ch; margin: 10px auto 0; color: var(--muted); }
+  footer { margin-top: 32px; text-align: center; font-size: 13px; color: var(--muted); }
+  #toast {
+    position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 528px; margin: 0 auto;
+    padding: 14px 16px; border-radius: 12px; background: var(--ink); color: var(--paper); font-weight: 600;
+    transform: translateY(calc(100% + 40px)); visibility: hidden; transition: transform .25s, visibility .25s; z-index: 10;
+  }
+  #toast.show { transform: none; visibility: visible; }
+  #toast.error { background: var(--accent); color: var(--accent-ink); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main id="app">
+  <div class="center" id="loading"><div><h1>Kinderzeitung</h1><p>Wird geladen …</p></div></div>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+const API = "https://xjqkfbprevuvqbgdrgcx.supabase.co/functions/v1/kinderzeitung/api/";
+const HALF_A4 = 1500; // characters, roughly half an A4 page of running text
+
+// ---------- token: from the personal link (#t=…), remembered on this device
+function readToken() {
+  const fromHash = new URLSearchParams(location.hash.slice(1)).get("t");
+  try {
+    if (fromHash) localStorage.setItem("kz-token", fromHash);
+    return fromHash || localStorage.getItem("kz-token");
+  } catch { return fromHash; }
+}
+const TOKEN = readToken();
+
+// ---------- tiny DOM helper (text only via textContent, never innerHTML with user data)
+function h(tag, props = {}, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (k === "text") n.textContent = v;
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) if (c != null && c !== false) n.append(c.nodeType ? c : document.createTextNode(c));
+  return n;
+}
+const svg = (path) => {
+  const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor");
+  s.setAttribute("stroke-width", "2.2"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round");
+  s.innerHTML = path; return s;
+};
+const ICON_CHECK = '<path d="M5 12.5l4.5 4.5L19 7.5"/>';
+const ICON_PLUS = '<path d="M12 5v14M5 12h14"/>';
+
+let toastTimer;
+function toast(msg, error = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "show" + (error ? " error" : "");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.className = ""), error ? 5000 : 2500);
+}
+
+// ---------- API
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: { "x-kz-token": TOKEN, ...(opts.headers || {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || "Da ist etwas schiefgegangen."), { status: res.status });
+  return data;
+}
+const post = (path, body) => api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+function upload(form, onProgress) {
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open("POST", API + "upload");
+    x.setRequestHeader("x-kz-token", TOKEN);
+    x.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    x.onload = () => {
+      let data = {}; try { data = JSON.parse(x.responseText); } catch {}
+      x.status < 300 ? resolve(data) : reject(new Error(data.error || "Hochladen hat nicht geklappt."));
+    };
+    x.onerror = () => reject(new Error("Keine Verbindung. Versuch es bitte nochmal."));
+    x.send(form);
+  });
+}
+
+const thumbCache = new Map();
+async function loadThumb(id, box, attempt = 0) {
+  if (thumbCache.has(id)) return box.replaceChildren(h("img", { src: thumbCache.get(id), alt: "" }));
+  try {
+    const res = await fetch(API + "thumb?id=" + id, { headers: { "x-kz-token": TOKEN } });
+    if (!res.ok) throw 0;
+    const url = URL.createObjectURL(await res.blob());
+    thumbCache.set(id, url);
+    box.replaceChildren(h("img", { src: url, alt: "" }));
+  } catch {
+    // Drive renders previews of fresh uploads with a short delay.
+    if (attempt < 3) setTimeout(() => loadThumb(id, box, attempt + 1), 3000 * (attempt + 1));
+  }
+}
+
+// ---------- state
+let state = null;
+const draft = { category: null, files: [], text: "" };
+
+async function refresh(data) {
+  state = data || (await api("me"));
+  render();
+}
+
+// ---------- render
+function render() {
+  const s = state;
+  const app = document.getElementById("app");
+  const filed = s.items.filter((i) => i.category);
+  const pending = s.items.filter((i) => !i.category);
+  const have = new Set(filed.map((i) => i.category));
+  const catTitle = Object.fromEntries(s.categories.map((c) => [c.id, c.title]));
+  const days = s.daysLeft === 0 ? "heute" : s.daysLeft === 1 ? "morgen" : `in ${s.daysLeft} Tagen`;
+
+  app.replaceChildren(...[
+    h("header", { class: "masthead" },
+      h("p", { class: "eyebrow", text: "Kinderzeitung" }),
+      h("h1", { text: `Hallo ${s.name}!` }),
+      h("p", { class: "meta", text: `Ausgabe ${s.issueLabel}` }),
+      h("span", { class: "deadline", text: `Redaktionsschluss ${s.deadline} (${days})` }),
+      h("div", { class: "checklist", "aria-label": "Diesen Monat" },
+        s.monthly.map((id) => h("span", { class: "chip" + (have.has(id) ? " done" : "") },
+          have.has(id) ? svg(ICON_CHECK) : null, catTitle[id]))),
+    ),
+
+    pending.length ? h("section", {},
+      h("h2", { text: "Wartet auf Kategorie" }),
+      h("p", { class: "hint", style: "margin:-6px 0 12px", text: "Über WhatsApp geschickt. Tipp an, wofür es ist." }),
+      h("ul", { class: "items" }, pending.map((i) => itemCard(i, true))),
+    ) : null,
+
+    h("section", {}, newForm()),
+
+    h("section", {},
+      h("h2", { text: `Deine Beiträge (${filed.length})` }),
+      filed.length
+        ? h("ul", { class: "items" }, filed.map((i) => itemCard(i, false)))
+        : h("div", { class: "card empty-state", text: "Für diese Ausgabe ist noch nichts da." }),
+    ),
+
+    h("footer", { text: "Diese Seite ist nur für dich. Bitte gib den Link nicht weiter." }),
+  ].filter(Boolean));
+}
+
+function segmented(selected, onPick, compact = false) {
+  return h("div", { class: "seg" + (compact ? " compact" : ""), role: "radiogroup", "aria-label": "Kategorie" },
+    state.categories.map((c) => h("button", {
+      type: "button", role: "radio", "aria-checked": String(c.id === selected),
+      onclick: () => onPick(c.id),
+    }, c.title, compact ? null : h("small", { text: c.description }))));
+}
+
+function newForm() {
+  const card = h("div", { class: "card" });
+  const preview = h("div", { class: "selected" });
+  const count = h("span", { class: "hint" });
+  const bar = h("div");
+  const progress = h("div", { class: "progress", hidden: true }, h("p", { class: "hint", text: "Wird hochgeladen …" }), h("div", { class: "bar" }, h("div")));
+  const save = h("button", { class: "primary", type: "button", text: "Speichern" });
+  const text = h("textarea", {
+    id: "kz-text", placeholder: "Was ist passiert? Wer, wo, wann, wie war's?", "aria-label": "Text",
+    oninput: (e) => { draft.text = e.target.value; updateCount(); },
+  });
+  text.value = draft.text;
+
+  function updateCount() {
+    const n = draft.text.trim().length;
+    count.textContent = `${n} Zeichen · ca. ${HALF_A4} für eine halbe A4-Seite`;
+    bar.style.width = Math.min(100, (n / HALF_A4) * 100) + "%";
+  }
+  function drawPreview() {
+    preview.replaceChildren(...draft.files.map((f, idx) => h("figure", {},
+      f.type.startsWith("image/") ? h("img", { src: URL.createObjectURL(f), alt: "" }) : h("div", { class: "file", text: f.name }),
+      h("button", { class: "rm", type: "button", "aria-label": `${f.name} entfernen`, text: "×",
+        onclick: () => { draft.files.splice(idx, 1); drawPreview(); } }),
+    )));
+  }
+
+  const segWrap = h("div");
+  const drawSeg = () => segWrap.replaceChildren(segmented(draft.category, (id) => { draft.category = id; drawSeg(); }));
+  drawSeg();
+
+  const input = h("input", {
+    type: "file", multiple: true, accept: "image/*,video/*,audio/*,application/pdf", "aria-label": "Fotos oder Dateien auswählen",
+    onchange: (e) => { draft.files.push(...e.target.files); e.target.value = ""; drawPreview(); },
+  });
+
+  save.addEventListener("click", async () => {
+    if (!draft.category) return toast("Bitte wähl zuerst eine Kategorie.", true);
+    if (!draft.files.length && !draft.text.trim()) return toast("Füg ein Foto, eine Datei oder einen Text hinzu.", true);
+    const form = new FormData();
+    form.append("category", draft.category);
+    form.append("text", draft.text);
+    for (const f of draft.files) form.append("files", f, f.name);
+    save.disabled = true; progress.hidden = false;
+    try {
+      const data = await upload(form, (p) => (progress.querySelector(".bar > div").style.width = Math.round(p * 100) + "%"));
+      draft.files = []; draft.text = ""; draft.category = null;
+      toast("Gespeichert.");
+      await refresh(data);
+    } catch (e) {
+      toast(e.message, true);
+      save.disabled = false; progress.hidden = true;
+    }
+  });
+
+  drawPreview(); updateCount();
+  card.append(
+    h("h2", { text: "Neuer Beitrag" }),
+    h("label", { class: "field", style: "margin-top:0", text: "Wofür ist es?" }), segWrap,
+    h("label", { class: "field", text: "Fotos oder Datei" }),
+    h("label", { class: "pick" }, svg(ICON_PLUS), "Auswählen", input),
+    preview,
+    h("label", { class: "field", for: "kz-text", text: "Text" }), text,
+    h("div", { class: "counter" }, count), h("div", { class: "bar" }, bar),
+    h("p", { class: "hint", style: "margin-top:8px", text: "Der Text wird zusammen mit dem ersten Foto gespeichert. Jeder Beitrag mind. eine halbe A4-Seite." }),
+    save, progress,
+  );
+  return card;
+}
+
+const KIND_LABEL = { text: "TEXT", document: "PDF", audio: "AUDIO", video: "VIDEO", image: "FOTO" };
+
+function itemCard(i, isPending) {
+  const thumb = h("div", { class: "thumb", text: KIND_LABEL[i.kind] || "DATEI" });
+  if (i.thumb) loadThumb(i.id, thumb);
+  const date = new Date(i.createdAt).toLocaleString("de-AT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const catTitle = state.categories.find((c) => c.id === i.category)?.title;
+  const body = h("div", {},
+    h("div", { class: "tags" },
+      catTitle ? h("span", { class: "tag", text: catTitle }) : null,
+      h("span", { text: i.source === "web" ? "Web" : "WhatsApp" }), h("span", { text: "·" }), h("span", { text: date })),
+    h("p", { class: "text clamp" + (i.text ? "" : " empty"), text: i.text || (i.kind === "text" ? "" : "Noch kein Text") }),
+  );
+  const li = h("li", { class: "card item" + (isPending ? " pending" : "") }, thumb, body);
+
+  if (isPending) {
+    body.append(h("div", { style: "margin-top:10px" },
+      segmented(null, (id) => run(li, () => post("update", { id: i.id, category: id }), "Einsortiert."), true)));
+    body.append(h("div", { class: "actions" }, h("button", { class: "ghost danger", type: "button", text: "Löschen", onclick: () => confirmDelete(li, i) })));
+    return li;
+  }
+
+  body.append(h("div", { class: "actions" },
+    h("button", { class: "ghost", type: "button", text: i.kind === "text" ? "Bearbeiten" : "Text bearbeiten", onclick: () => openEditor(li, i) }),
+    h("button", { class: "ghost danger", type: "button", text: "Löschen", onclick: () => confirmDelete(li, i) }),
+  ));
+  return li;
+}
+
+function openEditor(li, i) {
+  let category = i.category;
+  const ta = h("textarea", { "aria-label": "Text bearbeiten" }); ta.value = i.text;
+  const segWrap = h("div", { style: "margin-top:10px" });
+  const drawSeg = () => segWrap.replaceChildren(segmented(category, (id) => { category = id; drawSeg(); }, true));
+  drawSeg();
+  const editor = h("div", { class: "editor" }, ta, segWrap,
+    h("div", { class: "actions" },
+      h("button", { class: "ghost solid", type: "button", text: "Speichern",
+        onclick: () => run(li, () => post("update", { id: i.id, text: ta.value, ...(category !== i.category ? { category } : {}) }), "Gespeichert.") }),
+      h("button", { class: "ghost", type: "button", text: "Abbrechen", onclick: render }),
+    ));
+  li.querySelector(".editor")?.remove();
+  li.append(editor); ta.focus();
+}
+
+function confirmDelete(li, i) {
+  li.querySelector(".editor")?.remove();
+  li.append(h("div", { class: "editor" },
+    h("p", { style: "margin-top:10px;font-weight:600", text: "Wirklich löschen? Es landet im Papierkorb und fehlt dann in der Zeitung." }),
+    h("div", { class: "actions" },
+      h("button", { class: "ghost solid", type: "button", text: "Ja, löschen", onclick: () => run(li, () => post("delete", { id: i.id }), "Gelöscht.") }),
+      h("button", { class: "ghost", type: "button", text: "Nein", onclick: render }),
+    )));
+}
+
+async function run(li, fn, okMsg) {
+  li.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  try { await refresh(await fn()); toast(okMsg); }
+  catch (e) { toast(e.message, true); li.querySelectorAll("button").forEach((b) => (b.disabled = false)); }
+}
+
+function fatal(title, msg) {
+  document.getElementById("app").replaceChildren(h("div", { class: "center" }, h("div", {}, h("h1", { text: title }), h("p", { text: msg }))));
+}
+
+// ---------- start
+// Opening a different personal link in the same tab only changes the #part: reload with the new token.
+window.addEventListener("hashchange", () => location.reload());
+if (!TOKEN) {
+  fatal("Kinderzeitung", "Öffne diese Seite über deinen persönlichen Link. Schreib dem Kinderzeitung-Bot auf WhatsApp \"link\", dann bekommst du ihn.");
+} else {
+  refresh().catch((e) => fatal("Kinderzeitung", e.status === 401 ? e.message : "Die Seite konnte nicht geladen werden. Versuch es gleich nochmal."));
+}
+</script>
+</body>
+</html>
